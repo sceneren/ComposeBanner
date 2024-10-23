@@ -1,6 +1,0 @@
-jdk:
-  - openjdk17
-
-install:
-  - ./gradlew :banner:build :banner:publishToMavenLocal
-  - find . -name "*.aar"
