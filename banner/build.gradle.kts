@@ -1,10 +1,8 @@
-import com.android.build.gradle.BaseExtension
-
 plugins {
-    `maven-publish`
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.maven.publish)
 }
 
 android {
@@ -35,9 +33,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-        )
     }
 
     buildFeatures {
@@ -46,18 +41,18 @@ android {
 
 }
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = "com.github.sceneren"
-            artifactId = "compose-banner"
-
-            afterEvaluate {
-                from(components["release"])
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                groupId = "com.github.sceneren"
+                artifactId = "banner"
+                version = "0.0.3"
             }
         }
     }
 }
+
 
 dependencies {
 
