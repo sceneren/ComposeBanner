@@ -1,4 +1,7 @@
+import com.android.build.gradle.BaseExtension
+
 plugins {
+    `maven-publish`
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -24,15 +27,35 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+        )
     }
+
     buildFeatures {
         compose = true
+    }
+
+}
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.github.sceneren"
+            artifactId = "compose-banner"
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
     }
 }
 
