@@ -46,7 +46,7 @@ afterEvaluate {
         publications {
             create<MavenPublication>("release") {
                 groupId = "com.github.sceneren"
-                artifactId = "banner"
+                artifactId = "ComposeBanner"
                 version = "0.0.3"
             }
         }
