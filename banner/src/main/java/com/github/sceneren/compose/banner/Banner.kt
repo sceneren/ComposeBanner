@@ -26,15 +26,16 @@ fun <T> Banner(
     indicatorCheckColor: Color = Color.White,
     indicatorNormalColor: Color = Color.Gray,
     @IndicatorGravity indicatorGravity: Int = IndicatorGravity.CENTER,
-    @IndicatorSlideMode indicatorSlideMode: Int = IndicatorSlideMode.NORMAL,
+    @IndicatorSlideMode indicatorSlideMode: Int = IndicatorSlideMode.SCALE,
     @IndicatorStyle indicatorStyle: Int = IndicatorStyle.CIRCLE,
     indicatorNormalWidth: Dp = 4.dp,
     indicatorCheckWidth: Dp = 4.dp,
-    indicatorHeight: Dp = 6.dp,
+    indicatorHeight: Dp = 4.dp,
     @Visibility visibility: Int = View.VISIBLE,
     @BannerPageStyle pageStyle: Int = BannerPageStyle.NORMAL,
     pageScale: Float = 0.85f,
-    pageRevealWidth: Dp = 20.dp,
+    pageRevealWidth: Dp = 0.dp,
+    pageMargin: Dp = 0.dp,
     itemBuilder: @Composable (item: T, index: Int) -> Unit,
     itemTypeBuilder: BannerAdapter.ItemTypeBuilder? = null,
 ) {
@@ -61,6 +62,10 @@ fun <T> Banner(
         pageRevealWidth.toPx().toInt()
     }
 
+    val pageMarginPx = with(density) {
+        pageMargin.toPx().toInt()
+    }
+
     val adapter = remember {
         BannerAdapter<T>().apply {
             this.itemList = items
@@ -78,7 +83,6 @@ fun <T> Banner(
             this.setAutoPlay(autoPlay)
             this.setCanLoop(looper)
             this.setInterval(autoPlayInterval)
-
             this.setIndicatorVisibility(visibility)
             this.setIndicatorGravity(indicatorGravity)
             this.setIndicatorStyle(indicatorStyle)
@@ -91,7 +95,11 @@ fun <T> Banner(
             this.setIndicatorSliderWidth(indicatorNormalWidthPx, indicatorCheckWidthPx)
 
             this.setPageStyle(pageStyle, pageScale)
-            this.setRevealWidth(pageRevealWidthPx)
+            if (pageRevealWidthPx > 0) {
+                this.setRevealWidth(pageRevealWidthPx)
+            }
+
+            this.setPageMargin(pageMarginPx)
 
             this.adapter = adapter
         }
