@@ -16,7 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -114,6 +113,22 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
                 Indicator(state = indicatorState)
             }
 
+        }
+
+        item {
+            Banner(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f),
+                pageCount = list.size
+            ) {
+                Image(
+                    modifier = Modifier.fillMaxSize(),
+                    painter = painterResource(list[index]),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
 
         items(30) {
