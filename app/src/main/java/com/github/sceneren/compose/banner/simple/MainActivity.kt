@@ -1,7 +1,6 @@
 package com.github.sceneren.compose.banner.simple
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -132,7 +131,6 @@ fun Greeting(modifier: Modifier = Modifier) {
                 animScale = 0.85f,
                 pageSpacing = 10.dp,
             ) {
-                Log.e("PL5","index===>${index}")
                 Image(
                     modifier = Modifier
                         .fillMaxSize(),

@@ -16,7 +16,6 @@
 
 package com.github.sceneren.compose.banner
 
-import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.foundation.gestures.Orientation
@@ -96,7 +95,6 @@ fun PagerIndicator(
     }
     val offsetPercentWithSelect by offsetPercentWithSelectFlow.collectAsState(0f)
     val selectIndex by selectIndexFlow.collectAsState(0)
-    Log.e("PL", "offsetPercentWithSelect==${offsetPercentWithSelect},selectIndex=${selectIndex}")
 
     Layout(modifier = modifier.runIf(userCanScroll) {
         scrollable(scrollState, orientation)
