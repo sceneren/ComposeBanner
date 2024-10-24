@@ -17,6 +17,7 @@
 package com.github.sceneren.compose.banner
 
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.runtime.*
@@ -66,7 +67,7 @@ fun Banner(
     if (pageCount <= 0)
         return
     //是否正在滚动倒计时中
-    val scrolling by remember(key1 = autoScroll, key2 = pageCount) {
+    var scrolling by remember(key1 = autoScroll, key2 = pageCount) {
         mutableStateOf(autoScroll && pageCount > 1)
     }
 
@@ -96,6 +97,9 @@ fun Banner(
         })
     }
 
+    val draggedState by bannerState.composePagerState.interactionSource.collectIsDraggedAsState()
+
+    scrolling = !draggedState
 
     CompositionLocalProvider(LocalIndexToKey provides { it % pageCount }) {
         //使用ComposePager放置元素
