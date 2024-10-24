@@ -16,14 +16,31 @@
 
 package com.github.sceneren.compose.banner
 
+import androidx.annotation.FloatRange
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
 /**
  * creator: lt  2022/6/25  lt.dygzs@qq.com
@@ -45,10 +62,6 @@ import kotlinx.coroutines.launch
  *                       Auto scroll interval
  * @param bannerKey 使用key来提高性能,减少重组,效果等同于[LazyColumn#items#key]
  *                  Using key to improve performance, reduce recombination, and achieve the same effect as [LazyColumn#items#key]
- * @param clip 是否对内容区域进行裁剪
- *             Whether to crop the content area
- * @param contentTransformation 变换ComposePager的Content
- *                              Transform the Content of ComposePager
  * @param content compose内容区域
  *                Content of compose
  */
@@ -61,11 +74,13 @@ fun Banner(
     userEnable: Boolean = true,
     autoScroll: Boolean = true,
     autoScrollTime: Long = 3000,
+    pageSpacing: Dp = 0.dp,
+    contentPadding: PaddingValues = PaddingValues(),
+    @FloatRange(from = 0.0, to = 1.0) animScale: Float = 1f,
     bannerKey: (index: Int) -> Any = { it },
     content: @Composable BannerScope.() -> Unit,
 ) {
-    if (pageCount <= 0)
-        return
+    if (pageCount <= 0) return
     //是否正在滚动倒计时中
     var scrolling by remember(key1 = autoScroll, key2 = pageCount) {
         mutableStateOf(autoScroll && pageCount > 1)
@@ -82,17 +97,14 @@ fun Banner(
         minOf(pageCount * bannerState.sumMultiple, Int.MAX_VALUE)
     }
 
-
     //自动滚动
     if (scrolling) {
         LaunchedEffect(key1 = autoScrollTime, block = {
             while (true) {
                 delay(autoScrollTime)
                 val index = bannerState.composePagerState.settledPage
-                if (index + 1 >= maxPageCount)
-                    bannerState.composePagerState.scrollToPage(pageCount * bannerState.startMultiple)
-                else
-                    bannerState.composePagerState.animateScrollToPage(index + 1)
+                if (index + 1 >= maxPageCount) bannerState.composePagerState.scrollToPage(pageCount * bannerState.startMultiple)
+                else bannerState.composePagerState.animateScrollToPage(index + 1)
             }
         })
     }
@@ -110,8 +122,27 @@ fun Banner(
                 userScrollEnabled = userEnable,
                 beyondViewportPageCount = maxOf(2, (pageCount - 1) / 2),
                 key = bannerKey,
+                pageSpacing = pageSpacing,
+                contentPadding = contentPadding,
             ) { page ->
-                content(BannerScope(page % pageCount))
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            if (pageCount > 1 && animScale != 1f) {
+                                val pageOffset =
+                                    ((bannerState.currentPage - page) + bannerState.currentPageOffsetFraction).absoluteValue
+
+                                scaleX = lerp(
+                                    start = animScale,
+                                    stop = 1f,
+                                    fraction = 1f - pageOffset.coerceIn(0f, 1f)
+                                )
+                            }
+                        }
+                ) {
+                    content(BannerScope(page % pageCount))
+                }
             }
         } else {
             HorizontalPager(
@@ -120,8 +151,25 @@ fun Banner(
                 userScrollEnabled = userEnable,
                 beyondViewportPageCount = maxOf(2, (pageCount - 1) / 2),
                 key = bannerKey,
+                pageSpacing = pageSpacing,
+                contentPadding = contentPadding,
             ) { page ->
-                content(BannerScope(page % pageCount))
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (pageCount > 1 && animScale != 1f) {
+                            val pageOffset =
+                                ((bannerState.composePagerState.currentPage - page) + bannerState.currentPageOffsetFraction).absoluteValue
+
+                            scaleY = lerp(
+                                start = animScale,
+                                stop = 1f,
+                                fraction = 1f - pageOffset.coerceIn(0f, 1f)
+                            )
+                        }
+                    }) {
+                    content(BannerScope(page % pageCount))
+                }
             }
         }
     }

@@ -47,7 +47,8 @@ class BannerState {
      * 获取Banner当前所在的索引
      * Get current index in the [Banner]
      */
-    fun getCurrSelectIndex(): Int = composePagerState.settledPage % pageCount
+    val currentPage: Int
+        get() = composePagerState.currentPage % pageCount
 
     /**
      * 创建Banner当前索引的flow对象
@@ -77,6 +78,12 @@ class BannerState {
     fun createChildOffsetPercentFlow(): StableFlow<Float> = snapshotFlow {
         composePagerState.currentPageOffsetFraction
     }.toStableFlow()
+
+    /**
+     * 获取Offset偏移量的state对象
+     */
+    val currentPageOffsetFraction: Float
+        get() = composePagerState.currentPageOffsetFraction
 
     /**
      * 切换选中的页数,无动画

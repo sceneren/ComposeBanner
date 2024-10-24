@@ -1,11 +1,13 @@
 package com.github.sceneren.compose.banner.simple
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,6 +62,8 @@ fun Greeting(modifier: Modifier = Modifier) {
     }
 
     val bannerState = rememberBannerState()
+    val bannerState2 = rememberBannerState()
+
     val defaultIndicatorPainter = remember {
         ColorPainter(color = Color.White)
     }
@@ -115,6 +119,28 @@ fun Greeting(modifier: Modifier = Modifier) {
                 )
             }
 
+        }
+
+        item {
+            Banner(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f),
+                pageCount = list.size,
+                bannerState = bannerState2,
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                animScale = 0.85f,
+                pageSpacing = 10.dp,
+            ) {
+                Log.e("PL5","index===>${index}")
+                Image(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    painter = painterResource(list[index]),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
 
         items(30) {
