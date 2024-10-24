@@ -4,14 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -20,16 +21,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.github.sceneren.compose.banner.Banner
-import com.github.sceneren.compose.banner.Indicator
-import com.github.sceneren.compose.banner.rememberIndicatorState
-import com.github.sceneren.compose.banner.rememberPagerSwipeState
+import com.github.sceneren.compose.banner.PagerIndicator
+import com.github.sceneren.compose.banner.rememberBannerState
 import com.github.sceneren.compose.banner.simple.theme.ComposeBannerTheme
 
 class MainActivity : ComponentActivity() {
@@ -39,19 +41,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             ComposeBannerTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    Greeting(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun Greeting(modifier: Modifier = Modifier) {
     val list = listOf(
         R.drawable.a1, R.drawable.a2,
         R.drawable.a3
@@ -61,74 +59,62 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         mutableStateOf(true)
     }
 
-    val linearPagerSwipeState = rememberPagerSwipeState()
-
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
-    val screenWidthPx = LocalDensity.current.run {
-        screenWidthDp.toPx()
+    val bannerState = rememberBannerState()
+    val defaultIndicatorPainter = remember {
+        ColorPainter(color = Color.White)
     }
-    val indicatorState = rememberIndicatorState()
 
+    val selectIndicatorPainter = remember {
+        ColorPainter(color = Color(0xFFF95521))
+    }
 
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-
-//        item {
-//            LinearPager(
-//                data = list,// data list
-//                pagerSwipeState = linearPagerSwipeState,// indicator need this
-//                duration = 3000,// auto scroll delay
-//                widthPx = screenWidthPx// ⚠️ need a fixed width, it's very important!
-//            ) { item, index -> // `it` is the data list's item, index is list's index
-//                Image(
-//                    modifier = Modifier.fillMaxSize(),
-//                    painter = painterResource(item),
-//                    contentDescription = null,
-//                    contentScale = ContentScale.Crop
-//                )
-//            }
-//        }
-
+    LazyColumn(modifier = modifier.fillMaxSize()) {
 
         item {
-            Column {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomEnd
+            ) {
                 Banner(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f),
-                    widthPx = screenWidthPx,
-                    indicatorEnable = true,
-                    indicatorState = indicatorState,
-                    data = list
-                ) { index, item, state, width ->
-                    Column {
+                    pageCount = list.size,
+                    bannerState = bannerState
+                ) {
+                    Image(
+                        modifier = Modifier.fillMaxSize(),
+                        painter = painterResource(list[index]),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                PagerIndicator(
+                    modifier = Modifier.padding(end = 10.dp, bottom = 10.dp),
+                    size = list.size,
+                    offsetPercentWithSelectFlow = bannerState.createChildOffsetPercentFlow(),
+                    selectIndexFlow = bannerState.createCurrSelectIndexFlow(),
+                    indicatorItem = {
                         Image(
-                            modifier = Modifier.fillMaxSize(),
-                            painter = painterResource(item),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop
+                            modifier = Modifier
+                                .size(width = 4.dp, height = 3.dp)
+                                .clip(RoundedCornerShape(100)),
+                            painter = defaultIndicatorPainter,
+                            contentDescription = null
+                        )
+                    },
+                    selectIndicatorItem = {
+                        Image(
+                            modifier = Modifier
+                                .size(width = 10.dp, height = 3.dp)
+                                .clip(RoundedCornerShape(100)),
+                            painter = selectIndicatorPainter,
+                            contentDescription = null
                         )
                     }
-
-                }
-                Indicator(state = indicatorState)
-            }
-
-        }
-
-        item {
-            Banner(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f),
-                pageCount = list.size
-            ) {
-                Image(
-                    modifier = Modifier.fillMaxSize(),
-                    painter = painterResource(list[index]),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop
                 )
             }
+
         }
 
         items(30) {

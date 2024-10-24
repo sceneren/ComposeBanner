@@ -16,7 +16,6 @@
 
 package com.github.sceneren.compose.banner
 
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -33,13 +32,14 @@ import kotlinx.coroutines.flow.Flow
 @Stable
 class BannerState {
     //起始倍数,用于支持用户开始就向左划
-    internal val startMultiple = 50
+    internal val startMultiple = 100
 
     //总倍数,正常情况下Banner可以循环滑动的次数
-    internal val sumMultiple = 5000
+    internal val sumMultiple = 50000
 
     //内部的ComposePager的state
-    internal val composePagerState: PagerState = PagerState { minOf(pageCount * sumMultiple, Int.MAX_VALUE) }
+    internal val composePagerState: PagerState =
+        PagerState { minOf(pageCount * sumMultiple, Int.MAX_VALUE) }
 
     internal var pageCount: Int = 1
 
@@ -54,7 +54,7 @@ class BannerState {
      * Create the [Flow] of the current index of the [Banner]
      */
     fun createCurrSelectIndexFlow(): StableFlow<Int> = snapshotFlow {
-        composePagerState.settledPage % pageCount
+        composePagerState.currentPage % pageCount
     }.toStableFlow()
 
     /**
@@ -68,33 +68,21 @@ class BannerState {
      * Get the [State] of the offset
      */
     fun getOffsetState(): State<Float> =
-        mutableFloatStateOf(composePagerState.getOffsetDistanceInPages(composePagerState.targetPage))
+        mutableFloatStateOf(composePagerState.currentPageOffsetFraction)
 
     /**
      * 创建子项Offset偏移比例的flow对象
      * Create the [Flow] of the percent of the offset
      */
     fun createChildOffsetPercentFlow(): StableFlow<Float> = snapshotFlow {
-        val mainAxisSize = if (composePagerState.layoutInfo.orientation == Orientation.Vertical) {
-            composePagerState.layoutInfo.viewportSize.height
-        } else {
-            composePagerState.layoutInfo.viewportSize.width
-        }
-
-        if (mainAxisSize == 0)
-            0f
-        else {
-            val percent =
-                composePagerState.getOffsetDistanceInPages(composePagerState.targetPage) / mainAxisSize
-            0 - (percent + composePagerState.settledPage)
-        }
+        composePagerState.currentPageOffsetFraction
     }.toStableFlow()
 
     /**
      * 切换选中的页数,无动画
      * Set the current index, no animate
      */
-    suspend fun setPageIndex(index: Int) {
+    suspend fun scrollToPage(index: Int) {
         composePagerState.scrollToPage(pageCount * startMultiple + index)
     }
 
@@ -102,7 +90,7 @@ class BannerState {
      * 切换选中的页数,有动画
      * Set the current index, with animate
      */
-    suspend fun setPageIndexWithAnimate(index: Int) {
+    suspend fun animateScrollToPage(index: Int) {
         composePagerState.animateScrollToPage(index)
     }
 }
