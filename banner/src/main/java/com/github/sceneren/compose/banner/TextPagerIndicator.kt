@@ -29,7 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -81,6 +82,8 @@ fun TextPagerIndicator(
     selectFontSize: TextUnit,
     textColor: Color,
     selectTextColor: Color,
+    fontWeight: FontWeight = FontWeight.Normal,
+    selectFontWeight: FontWeight = FontWeight.Normal,
     selectIndicatorColor: Color,
     onIndicatorClick: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -99,6 +102,8 @@ fun TextPagerIndicator(
         selectFontSize = selectFontSize,
         textColor = textColor,
         selectTextColor = selectTextColor,
+        fontWeight = fontWeight,
+        selectFontWeight = fontWeight,
         onIndicatorClick = onIndicatorClick,
         selectIndicatorItem = {
             var width by rememberMutableStateOf { 0.dp }
@@ -144,6 +149,8 @@ fun TextPagerIndicator(
     selectFontSize: TextUnit,
     textColor: Color,
     selectTextColor: Color,
+    fontWeight: FontWeight = FontWeight.Normal,
+    selectFontWeight: FontWeight = FontWeight.Normal,
     onIndicatorClick: (index: Int) -> Unit,
     selectIndicatorItem: @Composable PagerIndicatorScope.() -> Unit,
     modifier: Modifier = Modifier,
@@ -152,10 +159,10 @@ fun TextPagerIndicator(
 ) {
     val density = LocalDensity.current
     val fontPx by remember(fontSize, density) {
-        mutableStateOf(density.run { fontSize.toPx() })
+        mutableFloatStateOf(density.run { fontSize.toPx() })
     }
     val selectFontPx by remember(selectFontSize, density) {
-        mutableStateOf(density.run { selectFontSize.toPx() })
+        mutableFloatStateOf(density.run { selectFontSize.toPx() })
     }
     PagerIndicator(
         size = texts.size,
@@ -170,6 +177,7 @@ fun TextPagerIndicator(
                         onIndicatorClick(index)
                 }) {
                 val offsetPercentWithSelect by offsetPercentWithSelectFlow.collectAsState(0f)
+
                 val (size, color) = remember(
                     index,
                     selectIndex,
@@ -186,10 +194,21 @@ fun TextPagerIndicator(
                         percent.getPercentageValue(selectFontPx, fontPx).roundToInt().toSp()
                     } to percent.getPercentageValue(selectTextColor, textColor)
                 }
+
+                val weight = remember(index, selectIndex, selectFontWeight, fontWeight) {
+                    val percent = abs(selectIndex + offsetPercentWithSelect - index)
+                    if (percent > 1f) {
+                        fontWeight
+                    } else {
+                        selectFontWeight
+                    }
+                }
+
                 Text(
                     text = texts[index],
                     fontSize = size,
                     color = color,
+                    fontWeight = weight,
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
