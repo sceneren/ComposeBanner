@@ -26,16 +26,6 @@ implementation("com.github.sceneren:ComposeBanner:<version>")
 implementation("com.github.sceneren:ComposeIndicator:<version>")
 ```
 
-发布坐标、库版本、示例版本统一配置在根目录 `gradle.properties`：
-
-```properties
-GROUP=com.github.sceneren
-VERSION_NAME=1.0.0
-VERSION_CODE=1
-BANNER_ARTIFACT_ID=ComposeBanner
-INDICATOR_ARTIFACT_ID=ComposeBannerIndicator
-```
-
 ## 基础用法
 
 ```kotlin
