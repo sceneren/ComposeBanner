@@ -23,7 +23,7 @@ Banner 与 Indicator 相互解耦。只需要轮播时无需引入 Indicator。
 
 ```kotlin
 implementation("com.github.sceneren:ComposeBanner:<version>")
-implementation("com.github.sceneren:ComposeBannerIndicator:<version>")
+implementation("com.github.sceneren:ComposeIndicator:<version>")
 ```
 
 发布坐标、库版本、示例版本统一配置在根目录 `gradle.properties`：
