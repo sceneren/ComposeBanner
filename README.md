@@ -9,14 +9,15 @@
 - `:banner`：轮播、自动播放、横向/纵向、有限页真循环、多页露出和页面变换。
 - `:indicator`：可独立使用的 Indicator，支持 Circle、Dash、RoundRect，以及 Normal、Smooth、
   Worm、Color、Scale 五种滑动模式。
-- `:app`：所有主要能力的示例。
+- `:app`：Tab 分组全样式 showcase（Banner / Indicator / 组合）。
 
 Banner 与 Indicator 相互解耦。只需要轮播时无需引入 Indicator。
 
 ## 有界无限循环
 
-循环模式只创建 `pageCount + 2` 个逻辑页（首尾各一个边界哨兵），到达边界后无动画归位。
-实现中没有使用 `Int.MAX_VALUE`，也没有成倍复制数据。
+循环模式使用有限倍增虚拟页（`pageCount * LOOP_COUNT`），每一页两侧始终是真实内容页，
+因此 multi-page 露出、手势滑过首尾时不会出现空白邻居。停止滚动后若偏离中间块会无动画归位。
+实现中没有使用 `Int.MAX_VALUE` 哨兵，也没有复制业务数据列表。
 
 ## 依赖
 
