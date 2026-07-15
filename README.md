@@ -21,6 +21,11 @@ Banner 与 Indicator 相互解耦。只需要轮播时无需引入 Indicator。
 
 ## 依赖
 
+1、在 `settings.gradle.kts`中添加:
+```kotlin
+maven { url = uri("https://jitpack.io") }
+```
+2、在 `build.gradle.kts`中添加:
 ```kotlin
 implementation("com.github.sceneren:ComposeBanner:<version>")
 implementation("com.github.sceneren:ComposeIndicator:<version>")
