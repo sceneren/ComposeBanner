@@ -1,4 +1,4 @@
-# ComposeBanner
+# ComposeBanner ![Jitpack](https://jitpack.io/v/sceneren/ComposeBanner.svg)
 
 一个完全使用 Jetpack Compose 实现的 Banner 组件，能力对齐
 [BannerViewPager](https://github.com/zhpanvip/BannerViewPager)，但 API 按 Compose 的状态提升、插槽和
