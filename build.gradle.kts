@@ -6,3 +6,11 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.maven.publish) apply false
 }
+
+val publicationGroup = providers.gradleProperty("GROUP").get()
+val publicationVersion = providers.gradleProperty("VERSION_NAME").get()
+
+allprojects {
+    group = publicationGroup
+    version = publicationVersion
+}

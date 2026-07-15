@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "ComposeBanner"
 include(":app")
 include(":banner")
+include(":indicator")

@@ -1,76 +1,98 @@
-![Jitpack](https://jitpack.io/v/sceneren/ComposeBanner.svg)
 # ComposeBanner
-一个基于Android Compose的Banner组件，支持循环滚动（模拟无限滚动）。
 
-## Compatibility
+一个完全使用 Jetpack Compose 实现的 Banner 组件，能力对齐
+[BannerViewPager](https://github.com/zhpanvip/BannerViewPager)，但 API 按 Compose 的状态提升、插槽和
+`Modifier` 模型重新设计。
 
-| ComposeBanner  | Jetpack Compose |
-|----------------|-----------------|
-| 0.1.6+         |     1.10.0      |
+## 模块
 
-## Get started
-1、Add it in your settings.gradle.kts at the end of repositories:
+- `:banner`：轮播、自动播放、横向/纵向、有限页真循环、多页露出和页面变换。
+- `:indicator`：可独立使用的 Indicator，支持 Circle、Dash、RoundRect，以及 Normal、Smooth、
+  Worm、Color、Scale 五种滑动模式。
+- `:app`：所有主要能力的示例。
+
+Banner 与 Indicator 相互解耦。只需要轮播时无需引入 Indicator。
+
+## 有界无限循环
+
+循环模式只创建 `pageCount + 2` 个逻辑页（首尾各一个边界哨兵），到达边界后无动画归位。
+实现中没有使用 `Int.MAX_VALUE`，也没有成倍复制数据。
+
+## 依赖
+
 ```kotlin
-maven { url = uri("https://jitpack.io") }
+implementation("com.github.sceneren:ComposeBanner:<version>")
+implementation("com.github.sceneren:ComposeBannerIndicator:<version>")
 ```
 
-2、Add dependency:
+发布坐标、库版本、示例版本统一配置在根目录 `gradle.properties`：
 
-```kotlin
-// Replace <TAG> with the latest version
-implementation("com.github.sceneren:ComposeBanner:Tag")
+```properties
+GROUP=com.github.sceneren
+VERSION_NAME=1.0.0
+VERSION_CODE=1
+BANNER_ARTIFACT_ID=ComposeBanner
+INDICATOR_ARTIFACT_ID=ComposeBannerIndicator
 ```
 
-3、用法:
+## 基础用法
 
 ```kotlin
-@Composable
-fun BannerTest() {
-    val bannerState = rememberBannerState()
+val state = rememberBannerState()
 
+Box {
     Banner(
-         modifier = Modifier
-             .fillMaxWidth()
-             .aspectRatio(1f),
-         pageCount = list.size,
-         bannerState = bannerState
-     ) {
-         Image(
-             modifier = Modifier.fillMaxSize(),
-             painter = painterResource(list[index]),
-             contentDescription = null,
-             contentScale = ContentScale.Crop
-         )
-     }
+        pageCount = images.size,
+        state = state,
+        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+    ) {
+        Image(
+            painter = painterResource(images[index]),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 
-    //PagerIndicator
-    PagerIndicator(
-        modifier = Modifier.padding(end = 10.dp, bottom = 10.dp),
-        size = list.size,
-        offsetPercentWithSelectFlow = bannerState.createChildOffsetPercentFlow(),
-        selectIndexFlow = bannerState.createCurrSelectIndexFlow(),
-        indicatorItem = {
-            Image(
-                modifier = Modifier
-                    .size(width = 4.dp, height = 3.dp)
-                    .clip(RoundedCornerShape(100)),
-                painter = defaultIndicatorPainter,
-                contentDescription = null
-            )
-        },
-        selectIndicatorItem = {
-            Image(
-                modifier = Modifier
-                    .size(width = 10.dp, height = 3.dp)
-                    .clip(RoundedCornerShape(100)),
-                painter = selectIndicatorPainter,
-                contentDescription = null
-            )
-        }
+    BannerIndicator(
+        pageCount = images.size,
+        currentPage = state.currentPage,
+        currentPageOffsetFraction = state.currentPageOffsetFraction,
+        style = IndicatorStyle.RoundRect,
+        slideMode = IndicatorSlideMode.Worm,
+        modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
     )
 }
 ```
 
+## 多页、缩放和重叠
 
-## Thanks
-- [ComposeViews](https://github.com/ltttttttttttt/ComposeViews)：ComposeBanner只是从ComposeViews中提取出对应的文件来方便依赖。而不是完整依赖于ComposeViews
+```kotlin
+Banner(
+    pageCount = images.size,
+    contentPadding = PaddingValues(horizontal = 48.dp),
+    pageSpacing = 12.dp,
+    pageTransformer = BannerPageTransformers.overlap(
+        minimumScale = 0.82f,
+        overlapFraction = 0.08f,
+    ),
+) {
+    // page content
+}
+```
+
+内置 `None`、`scale(...)`、`overlap(...)`、`depth(...)` 变换，也可以通过
+`BannerPageTransformer` 完全自定义。`CustomIndicator` 提供连续的选中比例，可实现图片、文字或任意
+Composable 指示器。
+
+## 状态控制
+
+```kotlin
+scope.launch {
+    state.animateScrollToPage(2)
+    state.animateScrollBy(BannerScrollDirection.Next)
+    state.scrollToPage(0)
+}
+```
+
+自动播放会在用户拖动或宿主 Lifecycle 不处于 `STARTED` 时暂停。

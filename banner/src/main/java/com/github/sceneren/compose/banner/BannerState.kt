@@ -1,110 +1,176 @@
-/*
- * Copyright lt 2023
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.github.sceneren.compose.banner
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.Flow
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 
 /**
- * Banner的状态
- * State of the [Banner]
+ * State holder for [Banner].
+ *
+ * Infinite scrolling uses two boundary pages, so the underlying pager contains at most
+ * `pageCount + 2` pages. No large virtual page count or duplicated data set is used.
  */
 @Stable
-class BannerState {
-    //起始倍数,用于支持用户开始就向左划
-    internal val startMultiple = 100
+class BannerState internal constructor(
+    private val initialPage: Int,
+) {
+    private var configuredPageCount by mutableIntStateOf(0)
+    private var loopEnabled by mutableStateOf(false)
+    private var pendingLogicalPage: Int? = initialPage.coerceAtLeast(0)
 
-    //总倍数,正常情况下Banner可以循环滑动的次数
-    internal val sumMultiple = 50000
+    /** The bounded Compose pager state used by this banner. */
+    val pagerState: PagerState = PagerState { virtualPageCount }
 
-    //内部的ComposePager的state
-    internal val composePagerState: PagerState =
-        PagerState { minOf(pageCount * sumMultiple, Int.MAX_VALUE) }
+    /** Number of logical content pages. */
+    val pageCount: Int
+        get() = configuredPageCount
 
-    internal var pageCount: Int = 1
-
-    /**
-     * 获取Banner当前所在的索引
-     * Get current index in the [Banner]
-     */
+    /** Currently visible logical page in `0 until pageCount`. */
     val currentPage: Int
-        get() = composePagerState.currentPage % pageCount
+        get() = if (configuredPageCount == 0) {
+            initialPage.coerceAtLeast(0)
+        } else {
+            logicalPageFor(pagerState.currentPage)
+        }
 
-    /**
-     * 创建Banner当前索引的flow对象
-     * Create the [Flow] of the current index of the [Banner]
-     */
-    fun createCurrSelectIndexFlow(): StableFlow<Int> = snapshotFlow {
-        composePagerState.currentPage % pageCount
-    }.toStableFlow()
+    /** Logical page on which scrolling has settled. */
+    val settledPage: Int
+        get() = if (configuredPageCount == 0) {
+            initialPage.coerceAtLeast(0)
+        } else {
+            logicalPageFor(pagerState.settledPage)
+        }
 
-    /**
-     * 动画是否执行中
-     * Whether animate is running
-     */
-    fun isAnimRunning(): Boolean = composePagerState.isScrollInProgress
-
-    /**
-     * 获取Offset偏移量的state对象
-     * Get the [State] of the offset
-     */
-    fun getOffsetState(): State<Float> =
-        mutableFloatStateOf(composePagerState.currentPageOffsetFraction)
-
-    /**
-     * 创建子项Offset偏移比例的flow对象
-     * Create the [Flow] of the percent of the offset
-     */
-    fun createChildOffsetPercentFlow(): StableFlow<Float> = snapshotFlow {
-        composePagerState.currentPageOffsetFraction
-    }.toStableFlow()
-
-    /**
-     * 获取Offset偏移量的state对象
-     */
+    /** Offset from [currentPage], normally in `-0.5f..0.5f`. */
     val currentPageOffsetFraction: Float
-        get() = composePagerState.currentPageOffsetFraction
+        get() = pagerState.currentPageOffsetFraction
 
-    /**
-     * 切换选中的页数,无动画
-     * Set the current index, no animate
-     */
-    suspend fun scrollToPage(index: Int) {
-        composePagerState.scrollToPage(pageCount * startMultiple + index)
+    /** True while a drag or programmatic scroll is running. */
+    val isScrollInProgress: Boolean
+        get() = pagerState.isScrollInProgress
+
+    internal val virtualPageCount: Int
+        get() = when {
+            configuredPageCount <= 1 -> configuredPageCount
+            loopEnabled -> configuredPageCount + BOUNDARY_PAGE_COUNT
+            else -> configuredPageCount
+        }
+
+    internal val canLoop: Boolean
+        get() = loopEnabled && configuredPageCount > 1
+
+    internal fun updateConfiguration(pageCount: Int, infiniteLoop: Boolean) {
+        if (configuredPageCount == pageCount && loopEnabled == infiniteLoop) return
+
+        val previousPage = if (configuredPageCount == 0) initialPage else currentPage
+        configuredPageCount = pageCount
+        loopEnabled = infiniteLoop
+        pendingLogicalPage = when {
+            pageCount == 0 -> null
+            else -> previousPage.coerceIn(0, pageCount - 1)
+        }
     }
 
-    /**
-     * 切换选中的页数,有动画
-     * Set the current index, with animate
-     */
-    suspend fun animateScrollToPage(index: Int) {
-        composePagerState.animateScrollToPage(index)
+    internal suspend fun applyPendingPosition() {
+        val logicalPage = pendingLogicalPage ?: return
+        pendingLogicalPage = null
+        val target = physicalPageFor(logicalPage)
+        if (pagerState.currentPage != target) pagerState.scrollToPage(target)
+    }
+
+    internal suspend fun recenterIfNeeded() {
+        if (!canLoop || pagerState.isScrollInProgress) return
+        when (pagerState.settledPage) {
+            0 -> pagerState.scrollToPage(configuredPageCount)
+            configuredPageCount + 1 -> pagerState.scrollToPage(1)
+        }
+    }
+
+    /** Immediately moves to a logical page. */
+    suspend fun scrollToPage(page: Int) {
+        requirePage(page)
+        pagerState.scrollToPage(physicalPageFor(page))
+    }
+
+    /** Animates to a logical page and takes the short boundary path when looping. */
+    suspend fun animateScrollToPage(
+        page: Int,
+        animationSpec: AnimationSpec<Float> = spring(),
+    ) {
+        requirePage(page)
+        val target = when {
+            canLoop && currentPage == configuredPageCount - 1 && page == 0 -> configuredPageCount + 1
+            canLoop && currentPage == 0 && page == configuredPageCount - 1 -> 0
+            else -> physicalPageFor(page)
+        }
+        pagerState.animateScrollToPage(target, animationSpec = animationSpec)
+    }
+
+    /** Animates by one page and wraps at either boundary when looping is enabled. */
+    suspend fun animateScrollBy(
+        direction: BannerScrollDirection,
+        animationSpec: AnimationSpec<Float> = spring(),
+    ) {
+        if (configuredPageCount <= 1) return
+        val target = when (direction) {
+            BannerScrollDirection.Next -> currentPage + 1
+            BannerScrollDirection.Previous -> currentPage - 1
+        }
+        when {
+            target in 0 until configuredPageCount -> animateScrollToPage(target, animationSpec)
+            canLoop && target == configuredPageCount -> pagerState.animateScrollToPage(
+                configuredPageCount + 1,
+                animationSpec = animationSpec,
+            )
+            canLoop && target == -1 -> pagerState.animateScrollToPage(
+                0,
+                animationSpec = animationSpec,
+            )
+        }
+    }
+
+    internal fun logicalPageFor(physicalPage: Int): Int {
+        if (!canLoop) return physicalPage.coerceIn(0, (configuredPageCount - 1).coerceAtLeast(0))
+        return when (physicalPage) {
+            0 -> configuredPageCount - 1
+            configuredPageCount + 1 -> 0
+            else -> (physicalPage - 1).coerceIn(0, configuredPageCount - 1)
+        }
+    }
+
+    private fun physicalPageFor(logicalPage: Int): Int =
+        if (canLoop) logicalPage + 1 else logicalPage
+
+    private fun requirePage(page: Int) {
+        require(configuredPageCount > 0) { "Banner has no pages." }
+        require(page in 0 until configuredPageCount) {
+            "page ($page) must be in 0 until $configuredPageCount"
+        }
+    }
+
+    companion object {
+        private const val BOUNDARY_PAGE_COUNT = 2
+
+        internal val Saver = Saver<BannerState, Int>(
+            save = { it.currentPage },
+            restore = { BannerState(initialPage = it) },
+        )
     }
 }
 
-/**
- * 创建一个[remember]的[BannerState]
- * Create the [BannerState] of [remember]
- */
+/** Remembers a saveable [BannerState]. */
 @Composable
-fun rememberBannerState() = remember { BannerState() }
+fun rememberBannerState(initialPage: Int = 0): BannerState {
+    require(initialPage >= 0) { "initialPage must be at least 0" }
+    return rememberSaveable(saver = BannerState.Saver) {
+        BannerState(initialPage = initialPage)
+    }
+}
