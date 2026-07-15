@@ -27,8 +27,8 @@ maven { url = uri("https://jitpack.io") }
 ```
 2、在 `build.gradle.kts`中添加:
 ```kotlin
-implementation("com.github.sceneren:ComposeBanner:<version>")
-implementation("com.github.sceneren:ComposeIndicator:<version>")
+implementation("com.github.sceneren.ComposeBanner:banner:<version>")
+implementation("com.github.sceneren.ComposeBanner:indicator:<version>")
 ```
 
 ## 基础用法
