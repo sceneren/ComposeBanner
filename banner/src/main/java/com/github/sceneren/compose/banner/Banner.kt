@@ -40,8 +40,14 @@ class BannerScope internal constructor(
 /**
  * A lifecycle-aware Compose banner with bounded infinite looping and auto play.
  *
- * When [infiniteLoop] is enabled the pager contains only [pageCount] plus two boundary
- * pages. After settling on a boundary it is recentered without animation.
+ * When [infiniteLoop] is enabled the pager uses a finite multiplier
+ * (`pageCount * [BannerState.LOOP_COUNT]`) so every position has real neighbors.
+ * After settling far from the middle block it is recentered without animation.
+ * This avoids the blank peek pages of a pageCount+2 sentinel at first/last page.
+ *
+ * [disableScrollWhenSinglePage] defaults to true so a one-item banner cannot be
+ * scrolled. Set it to false to allow single-item looping/gestures when [infiniteLoop]
+ * is also enabled.
  */
 @Composable
 fun Banner(
@@ -54,6 +60,11 @@ fun Banner(
     autoPlayDirection: BannerScrollDirection = BannerScrollDirection.Next,
     orientation: Orientation = Orientation.Horizontal,
     userScrollEnabled: Boolean = true,
+    /**
+     * 只有一页时是否禁止手势滑动。默认 true。
+     * 设为 false 且 [infiniteLoop] 为 true 时，单页也可循环滑动。
+     */
+    disableScrollWhenSinglePage: Boolean = true,
     reverseLayout: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     pageSpacing: Dp = 0.dp,
@@ -67,11 +78,18 @@ fun Banner(
     require(autoPlayIntervalMillis > 0) { "autoPlayIntervalMillis must be positive" }
     require(beyondViewportPageCount >= 0) { "beyondViewportPageCount must not be negative" }
 
+    // disableScrollWhenSinglePage=true（默认）时，单页不允许进入循环虚拟页。
+    val allowSinglePageLoop = infiniteLoop && !disableScrollWhenSinglePage
+
     SideEffect {
-        state.updateConfiguration(pageCount, infiniteLoop)
+        state.updateConfiguration(
+            pageCount = pageCount,
+            infiniteLoop = infiniteLoop,
+            allowSinglePageLoop = allowSinglePageLoop,
+        )
     }
 
-    LaunchedEffect(state, pageCount, infiniteLoop) {
+    LaunchedEffect(state, pageCount, infiniteLoop, allowSinglePageLoop) {
         state.applyPendingPosition()
     }
 
@@ -91,7 +109,7 @@ fun Banner(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(state, pageCount, infiniteLoop) {
+    LaunchedEffect(state, pageCount, infiniteLoop, allowSinglePageLoop) {
         snapshotFlow { pagerState.settledPage to pagerState.isScrollInProgress }
             .filter { !it.second }
             .collect { state.recenterIfNeeded() }
@@ -104,6 +122,11 @@ fun Banner(
             .collect(currentOnPageChanged)
     }
 
+    val canAutoPlay = autoPlay &&
+        lifecycleStarted &&
+        !dragged &&
+        (pageCount > 1 || allowSinglePageLoop)
+
     LaunchedEffect(
         state,
         autoPlay,
@@ -112,8 +135,9 @@ fun Banner(
         pageCount,
         dragged,
         lifecycleStarted,
+        allowSinglePageLoop,
     ) {
-        if (!autoPlay || pageCount <= 1 || dragged || !lifecycleStarted) return@LaunchedEffect
+        if (!canAutoPlay) return@LaunchedEffect
         while (true) {
             delay(autoPlayIntervalMillis)
             if (!pagerState.isScrollInProgress) {
@@ -138,15 +162,26 @@ fun Banner(
         }
     }
 
+    val resolvedBeyondViewportPageCount = resolveBeyondViewportPageCount(
+        pageCount = pageCount,
+        infiniteLoop = infiniteLoop,
+        requested = beyondViewportPageCount,
+    )
+    val resolvedUserScrollEnabled = resolveUserScrollEnabled(
+        pageCount = pageCount,
+        userScrollEnabled = userScrollEnabled,
+        disableScrollWhenSinglePage = disableScrollWhenSinglePage,
+    )
+
     when (orientation) {
         Orientation.Horizontal -> HorizontalPager(
             state = pagerState,
             modifier = modifier,
             contentPadding = contentPadding,
             pageSize = pageSize,
-            beyondViewportPageCount = beyondViewportPageCount,
+            beyondViewportPageCount = resolvedBeyondViewportPageCount,
             pageSpacing = pageSpacing,
-            userScrollEnabled = userScrollEnabled,
+            userScrollEnabled = resolvedUserScrollEnabled,
             reverseLayout = reverseLayout,
             pageContent = pageContent,
         )
@@ -156,9 +191,9 @@ fun Banner(
             modifier = modifier,
             contentPadding = contentPadding,
             pageSize = pageSize,
-            beyondViewportPageCount = beyondViewportPageCount,
+            beyondViewportPageCount = resolvedBeyondViewportPageCount,
             pageSpacing = pageSpacing,
-            userScrollEnabled = userScrollEnabled,
+            userScrollEnabled = resolvedUserScrollEnabled,
             reverseLayout = reverseLayout,
             pageContent = pageContent,
         )

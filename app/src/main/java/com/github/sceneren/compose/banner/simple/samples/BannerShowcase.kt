@@ -73,6 +73,22 @@ internal fun BannerShowcase(modifier: Modifier = Modifier) {
         item {
             NonLoopSection(images)
         }
+        item {
+            SinglePageSection(
+                title = "单页默认不可滑",
+                images = images,
+                disableScrollWhenSinglePage = true,
+                description = "disableScrollWhenSinglePage=true（默认），只有 1 项时不能手势滑动",
+            )
+        }
+        item {
+            SinglePageSection(
+                title = "单页允许循环滑动",
+                images = images,
+                disableScrollWhenSinglePage = false,
+                description = "disableScrollWhenSinglePage=false，单页也可循环滑动/自动播放",
+            )
+        }
     }
 }
 
@@ -236,6 +252,46 @@ private fun NonLoopSection(images: List<Int>) {
         }
         Text(
             "infiniteLoop=false，滑到首尾后不可环绕",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SinglePageSection(
+    title: String,
+    images: List<Int>,
+    disableScrollWhenSinglePage: Boolean,
+    description: String,
+) {
+    val state = rememberBannerState()
+    val singleImages = remember(images) { images.take(1) }
+    SampleSection(title = title) {
+        SampleBannerFrame {
+            Banner(
+                pageCount = singleImages.size,
+                state = state,
+                infiniteLoop = true,
+                autoPlay = !disableScrollWhenSinglePage,
+                disableScrollWhenSinglePage = disableScrollWhenSinglePage,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                SampleBannerImage(
+                    imageRes = singleImages[index],
+                    contentDescription = "Single page",
+                )
+            }
+            NumberIndicator(
+                pageCount = singleImages.size,
+                currentPage = state.currentPage,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp),
+            )
+        }
+        Text(
+            description,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

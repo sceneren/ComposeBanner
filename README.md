@@ -97,3 +97,15 @@ scope.launch {
 ```
 
 自动播放会在用户拖动或宿主 Lifecycle 不处于 `STARTED` 时暂停。
+
+只有一页时默认禁止手势滑动（`disableScrollWhenSinglePage = true`）。若希望单页也可循环滑动：
+
+```kotlin
+Banner(
+    pageCount = 1,
+    infiniteLoop = true,
+    disableScrollWhenSinglePage = false,
+) {
+    // content
+}
+```
